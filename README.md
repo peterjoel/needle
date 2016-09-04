@@ -1,7 +1,9 @@
 # needle
 Search algorithms written in Rust
 
-Currently, Boyer-Moore is supported, though only working with `u8` arrays and not particularly optimised.
+Currently, only Boyer-Moore is supported, it works only with `u8` arrays and is not particularly optimised. Having 
+said that, when you only need to search in bytes, without special consideration for unicode characters, this 
+implementation is often faster than the Rust standard library's `&str::find()`.
 
 # Example Usage
 ```Rust
