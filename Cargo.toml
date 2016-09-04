@@ -1,0 +1,6 @@
+[package]
+name = "needle"
+version = "0.1.0"
+authors = ["peter <peter.hall@algomi.com>"]
+
+[dependencies]
