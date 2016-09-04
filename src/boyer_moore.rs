@@ -1,9 +1,8 @@
-use std::collections::BTreeMap;
 use super::traits::Search;
 
 pub struct BoyerMoore <'a> {
     needle: &'a [u8],
-    bad_chars: BTreeMap<u8, usize>,
+    bad_chars: [usize; 256],
 }
 
 impl <'a> BoyerMoore <'a> {
@@ -14,18 +13,19 @@ impl <'a> BoyerMoore <'a> {
             bad_chars: build_bad_chars_map(&needle),
         }
     }
+
+    #[inline]
+    fn get_bad_char_offset(&self, bad_char: u8) -> usize {
+        self.bad_chars[bad_char as usize]
+    }
 }
 
 
-fn build_bad_chars_map(needle: &[u8]) -> BTreeMap<u8, usize> {
-    let mut map = BTreeMap::new();
-    let mut n = needle.len() - 1;
-    while n != 0 {
-        n -= 1;
-        let c = needle[n];
-        if !map.contains_key(&c) {
-            map.insert(c, needle.len() - n - 1);
-        }
+fn build_bad_chars_map(needle: &[u8]) -> [usize; 256] {
+    let mut map = [needle.len(); 256];
+    for i in 0 .. needle.len() - 1 {
+        let c = needle[i] as usize;
+        map[c] = needle.len() - i - 1;
     }
     map
 }
@@ -33,19 +33,19 @@ fn build_bad_chars_map(needle: &[u8]) -> BTreeMap<u8, usize> {
 impl <'a> Search<'a> for BoyerMoore <'a> {
 
     fn first_index_of(&self, haystack: &'a [u8]) -> Option<usize> {
-        let mut i = self.needle.len() - 1;
-        'outer: while i < haystack.len() {
-            let mut j = self.needle.len();
-            let mut k = i + 1;
-            while j != 0 {
-                j -= 1;
-                k -= 1;
-                if self.needle[j] != haystack[k] {
-                    i += *self.bad_chars.get(&haystack[k]).unwrap_or(&self.needle.len());
-                    continue 'outer;
+        let mut position = 0;
+        let max_position = haystack.len() - self.needle.len(); 
+        while position <= max_position {
+            let mut needle_position = self.needle.len() - 1;
+            while haystack[position + needle_position] == self.needle[needle_position] {
+                if needle_position == 0 {
+                    return Some(position);
+                } else {
+                    needle_position -= 1;
                 }
             }
-            return Some(i - self.needle.len() + 1);
+            let bad_char = haystack[position + self.needle.len() - 1];
+            position += self.get_bad_char_offset(bad_char);
         }
         None
     }
@@ -71,6 +71,13 @@ pub mod test {
     pub fn test_bad_char() {
         let needle = BoyerMoore::new(&"abacac".as_bytes());
         let haystack = "acacacababadabacacad".as_bytes();
+        assert_eq!(Some(12), needle.first_index_of(&haystack));
+    }
+
+    #[test]
+    pub fn test_bad_char2() {
+        let needle = BoyerMoore::new(&"abacab".as_bytes());
+        let haystack = "acacacababadabacabad".as_bytes();
         assert_eq!(Some(12), needle.first_index_of(&haystack));
     }
 }
