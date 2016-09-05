@@ -58,11 +58,44 @@ impl <'a> BoyerMoore <'a> {
         self.find_in(&haystack).next()
     }
 
+
+    /// Returns an iterator that will produce the indices of the needle in the haystack.
+    /// This iterator will not find overlapping matches; the first character of a match 
+    /// will start after the last character of the previous match.
+    ///
+    /// # Example
+    /// ```
+    /// use needle::BoyerMoore;
+    /// let needle = BoyerMoore::new(b"aaba");
+    /// let haystack = b"aabaabaabaabaaba";
+    /// assert_eq!(vec![0,6,12], needle.find_in(haystack).collect::<Vec<usize>>());
+    /// ```
     pub fn find_in<'b>(&'b self, haystack: &'b [u8]) -> BoyerMooreIter {
         BoyerMooreIter {
             searcher: &self,
             haystack: &haystack,
             position: 0,
+            overlapping_matches: false,
+        }
+    }
+
+    /// Returns an iterator that will produce the indices of the needle in the haystack.
+    /// This iterator will find overlapping matches; the first character of a match is 
+    /// allowed to be matched from within the previous match.
+    ///
+    /// # Example
+    /// ```
+    /// use needle::BoyerMoore;
+    /// let needle = BoyerMoore::new(b"aaba");
+    /// let haystack = b"aabaabaabaabaaba";
+    /// assert_eq!(vec![0,3,6,9,12], needle.find_overlapping_in(haystack).collect::<Vec<usize>>());
+    /// ```
+    pub fn find_overlapping_in<'b>(&'b self, haystack: &'b [u8]) -> BoyerMooreIter {
+        BoyerMooreIter {
+            searcher: &self,
+            haystack: &haystack,
+            position: 0,
+            overlapping_matches: true
         }
     }
 }
@@ -72,6 +105,7 @@ pub struct BoyerMooreIter <'a> {
     searcher: &'a BoyerMoore<'a>,
     haystack: &'a [u8],
     position: usize,
+    overlapping_matches: bool,
 }
 
 
@@ -81,7 +115,11 @@ impl <'a> Iterator for BoyerMooreIter<'a> {
         self.searcher
             .find_from_position(&self.haystack, self.position)
             .and_then(|position| {
-                self.position = position + 1;
+                if self.overlapping_matches {
+                    self.position = position + 1;
+                } else {
+                    self.position = position + self.searcher.needle.len();
+                }
                 Some(position)
             })
     }
@@ -213,6 +251,21 @@ pub mod test {
         let needle = BoyerMoore::new(b"xyz");
         let haystack = b"01xyzxyz890xyz45xyz";
         assert_eq!(vec![2,5,11,16], needle.find_in(haystack).collect::<Vec<usize>>());
+    }
+
+
+    #[test]
+    pub fn test_overlapping() {
+        let needle = BoyerMoore::new(b"aaba");
+        let haystack = b"aabaabaabaabaaba";
+        assert_eq!(vec![0,3,6,9,12], needle.find_overlapping_in(haystack).collect::<Vec<usize>>());
+    }
+
+    #[test]
+    pub fn test_non_overlapping() {
+        let needle = BoyerMoore::new(b"aaba");
+        let haystack = b"aabaabaabaabaaba";
+        assert_eq!(vec![0,6,12], needle.find_in(haystack).collect::<Vec<usize>>());
     }
 
 
