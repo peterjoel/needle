@@ -4,12 +4,10 @@
 //!
 //! ```
 //! use needle::BoyerMoore;
-//! use needle::Search;
-//! let needle = BoyerMoore::new("example".as_bytes());
-//! let haystack = "This is an example of searching for a word".as_bytes();
-//! assert_eq!(Some(11), needle.first_index(&haystack));
+//! let needle = BoyerMoore::new(b"example");
+//! let haystack = b"This is an example of searching for a word";
+//! assert_eq!(Some(11), needle.find_in(haystack).next());
 //! ```
-use super::Search;
 use std::cmp::max;
 
 pub struct BoyerMoore <'a> {
@@ -35,8 +33,60 @@ impl <'a> BoyerMoore <'a> {
     #[inline]
     fn get_good_suffix_offset(&self, needle_position: usize) -> usize {
         self.good_suffixes[needle_position]
+
+    }
+
+    fn find_from_position(&self, haystack: &'a [u8], mut position: usize) -> Option<usize> {
+        let max_position = haystack.len() - self.needle.len(); 
+        while position <= max_position {
+            let mut needle_position = self.needle.len() - 1;
+            while haystack[position + needle_position] == self.needle[needle_position] {
+                if needle_position == 0 {
+                    return Some(position);
+                } else {
+                    needle_position -= 1;
+                }
+            }
+            let bad_char = haystack[position + self.needle.len() - 1];
+            position += max(self.get_bad_char_offset(bad_char),
+                            self.get_good_suffix_offset(needle_position));
+        }
+        None
+    }
+
+    pub fn first_index<'b>(&'b self, haystack: &'b [u8]) -> Option<usize> {
+        self.find_in(&haystack).next()
+    }
+
+    pub fn find_in<'b>(&'b self, haystack: &'b [u8]) -> BoyerMooreIter {
+        BoyerMooreIter {
+            searcher: &self,
+            haystack: &haystack,
+            position: 0,
+        }
     }
 }
+
+
+pub struct BoyerMooreIter <'a> {
+    searcher: &'a BoyerMoore<'a>,
+    haystack: &'a [u8],
+    position: usize,
+}
+
+
+impl <'a> Iterator for BoyerMooreIter<'a> {
+    type Item = usize;
+    fn next(&mut self) -> Option<usize> {
+        self.searcher
+            .find_from_position(&self.haystack, self.position)
+            .and_then(|position| {
+                self.position = position + 1;
+                Some(position)
+            })
+    }
+}
+
 
 // Bad characters table is used for when the last (rightmost) character of the needle doesn't match. The table
 // gives the number of elements to skip, to find a character that does match.
@@ -97,29 +147,6 @@ fn build_good_suffixes_table(needle: &[u8]) -> Vec<usize> {
 }
 
 
-impl <'a> Search<'a> for BoyerMoore <'a> {
-    fn first_index(&self, haystack: &'a [u8]) -> Option<usize> {
-        let mut position = 0;
-        let max_position = haystack.len() - self.needle.len(); 
-        while position <= max_position {
-            let mut needle_position = self.needle.len() - 1;
-            while haystack[position + needle_position] == self.needle[needle_position] {
-                if needle_position == 0 {
-                    return Some(position);
-                } else {
-                    needle_position -= 1;
-                }
-            }
-            let bad_char = haystack[position + self.needle.len() - 1];
-            position += max(self.get_bad_char_offset(bad_char),
-                            self.get_good_suffix_offset(needle_position));
-        }
-        None
-    }
-}
-
-
-
 #[test]
 pub fn test_good_suffix_table2() {
     let needle = "GCAGAGAG".as_bytes();
@@ -148,28 +175,45 @@ pub fn test_good_suffix_table() {
 pub mod test {
 
     use super::*;
-    use super::super::Search;
 
     #[test]
     pub fn test_simple() {
-        let needle = BoyerMoore::new(&"ghi".as_bytes());
-        let haystack = "abc def ghi jkl".as_bytes();
-        assert_eq!(Some(8), needle.first_index(&haystack));
+        let needle = BoyerMoore::new(b"ghi");
+        let haystack = b"abc def ghi jkl";
+        assert_eq!(Some(8), needle.first_index(haystack));
     }
 
 
     #[test]
     pub fn test_bad_char() {
-        let needle = BoyerMoore::new(&"abacac".as_bytes());
-        let haystack = "acacacababadabacacad".as_bytes();
-        assert_eq!(Some(12), needle.first_index(&haystack));
+        let needle = BoyerMoore::new(b"abacac");
+        let haystack = b"acacacababadabacacad";
+        assert_eq!(Some(12), needle.first_index(haystack));
     }
 
 
     #[test]
     pub fn test_bad_char2() {
-        let needle = BoyerMoore::new(&"abacab".as_bytes());
-        let haystack = "acacacababadabacabad".as_bytes();
-        assert_eq!(Some(12), needle.first_index(&haystack));
+        let needle = BoyerMoore::new(b"abacab");
+        let haystack = b"acacacababadabacabad";
+        assert_eq!(Some(12), needle.first_index(haystack));
     }
+
+    #[test]
+    pub fn test_search_twice() {
+        let needle = BoyerMoore::new(b"xyz");
+        let haystack = b"01xyzxyz901xyz56xyz";
+        assert_eq!(Some(2), needle.first_index(haystack));
+        assert_eq!(Some(2), needle.first_index(haystack));
+    }
+
+
+    #[test]
+    pub fn test_iter() {
+        let needle = BoyerMoore::new(b"xyz");
+        let haystack = b"01xyzxyz890xyz45xyz";
+        assert_eq!(vec![2,5,11,16], needle.find_in(haystack).collect::<Vec<usize>>());
+    }
+
+
 }

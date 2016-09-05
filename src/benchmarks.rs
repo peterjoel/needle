@@ -1,9 +1,10 @@
 
+#[cfg(test)]
 use test::Bencher;
-
+#[cfg(test)]
 use super::boyer_moore::BoyerMoore;
+#[cfg(test)]
 use super::naive::NaiveSearch;
-use super::Search;
 
 
 #[bench]
@@ -12,6 +13,16 @@ fn find_pi_100k_digits_boyer_moore(b: &mut Bencher) {
     let needle = BoyerMoore::new(subsequence().as_bytes());
     b.iter(|| {
         assert_eq!(Some(76_842), needle.first_index(&haystack))
+    });
+}
+
+
+#[bench]
+fn find_pi_100k_digits_boyer_moore_iter_first(b: &mut Bencher) {
+    let haystack = pi_100k_digits().as_bytes();
+    let needle = BoyerMoore::new(subsequence().as_bytes());
+    b.iter(|| {
+        assert_eq!(Some(76_842), needle.find_in(&haystack).next())
     });
 }
 
@@ -43,9 +54,10 @@ fn find_pi_100k_digits_std_str(b: &mut Bencher) {
     });
 }
 
-
+#[cfg(test)]
 fn subsequence<'a>() -> &'a str { "87935356652125562013998824962847872621443236285367650259145046837763528258765213" } 
 
+#[cfg(test)]
 fn pi_100k_digits<'a>() -> &'a str {
    "3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745\
    02841027019385211055596446229489549303819644288109756659334461284756482337867831652712019091456485669234603486104543266482133936072602491412737245870066063155881\

@@ -8,8 +8,12 @@ implementation is often faster than the Rust standard library's `&str::find()`.
 # Example Usage
 ```Rust
 use needle::BoyerMoore;
-use needle::Search;
-let needle = BoyerMoore::new("example".as_bytes());
-let haystack = "This is an example of searching for a word".as_bytes();
-assert_eq!(Some(11), needle.first_index(&haystack));
+let needle = BoyerMoore::new(b"Peter Piper");
+let haystack = b"Peter Piper picked a peck of pickled peppers.\
+                 A peck of pickled peppers Peter Piper picked.\
+                 If Peter Piper picked a peck of pickled peppers,\
+                 Where's the peck of pickled peppers Peter Piper picked?";
+for i in needle.find_in(haystack) {
+    println!("Found Peter Piper at index {}.", i);
+}
 ```
