@@ -2,7 +2,9 @@
 #[cfg(test)]
 use test::Bencher;
 #[cfg(test)]
-use super::boyer_moore::BoyerMoore;
+use super::BoyerMoore;
+#[cfg(test)]
+use super::Horspool;
 #[cfg(test)]
 use super::naive::NaiveSearch;
 
@@ -31,6 +33,34 @@ fn find_pi_100k_digits_boyer_moore_with_precompute(b: &mut Bencher) {
     let haystack = pi_100k_digits().as_bytes();;
     b.iter(|| {
         let needle = BoyerMoore::new(subsequence().as_bytes());
+        assert_eq!(Some(76_842), needle.first_index(&haystack))
+    });
+}
+
+#[bench]
+fn find_pi_100k_digits_horspool(b: &mut Bencher) {
+    let haystack = pi_100k_digits().as_bytes();
+    let needle = Horspool::new(subsequence().as_bytes());
+    b.iter(|| {
+        assert_eq!(Some(76_842), needle.first_index(&haystack))
+    });
+}
+
+
+#[bench]
+fn find_pi_100k_digits_horspool_iter_first(b: &mut Bencher) {
+    let haystack = pi_100k_digits().as_bytes();
+    let needle = Horspool::new(subsequence().as_bytes());
+    b.iter(|| {
+        assert_eq!(Some(76_842), needle.find_in(&haystack).next())
+    });
+}
+
+#[bench]
+fn find_pi_100k_digits_horspool_with_precompute(b: &mut Bencher) {
+    let haystack = pi_100k_digits().as_bytes();;
+    b.iter(|| {
+        let needle = Horspool::new(subsequence().as_bytes());
         assert_eq!(Some(76_842), needle.first_index(&haystack))
     });
 }

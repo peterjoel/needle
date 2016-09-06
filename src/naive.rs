@@ -1,4 +1,6 @@
+//! Naive search for comparison
 
+use skip_search::*;
 
 pub struct NaiveSearch <'a> {
     needle: &'a [u8]
@@ -10,18 +12,6 @@ impl <'a> NaiveSearch <'a> {
         NaiveSearch { needle: needle }
     }
 
-    fn find_from_position(&self, haystack: &'a [u8], position: usize) -> Option<usize> {
-        'outer: for x in position .. (haystack.len() - self.needle.len()) {
-            for y in 0 .. self.needle.len() {
-                if haystack[x + y] != self.needle[y] {
-                    continue 'outer;
-                }
-            }
-            return Some(x);
-        }
-        None
-    }
-
     pub fn first_index<'b>(&'b self, haystack: &'b [u8]) -> Option<usize> {
         self.find_in(&haystack).next()
     }
@@ -31,7 +21,32 @@ impl <'a> NaiveSearch <'a> {
             searcher: &self,
             haystack: &haystack,
             position: 0,
+            overlapping_matches: false,
         }
+    }
+    
+    pub fn find_overlapping_in<'b>(&'b self, haystack: &'b [u8]) -> NaiveSearchIter {
+        NaiveSearchIter {
+            searcher: &self,
+            haystack: &haystack,
+            position: 0,
+            overlapping_matches: true,
+        }
+    }
+}
+
+impl <'a> SkipSearch for NaiveSearch<'a> {
+    #[inline]
+    fn skip_offset(&self, _: u8, _: usize) -> usize { 1 }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.needle.len()
+    }
+
+    #[inline]
+    fn char_at(&self, index: usize) -> u8 {
+        self.needle[index]
     }
 }
 
@@ -39,22 +54,24 @@ pub struct NaiveSearchIter<'a> {
     searcher: &'a NaiveSearch<'a>,
     haystack: &'a [u8],
     position: usize,
+    overlapping_matches: bool,
 }
 
 
 impl <'a> Iterator for NaiveSearchIter<'a> {
     type Item = usize;
     fn next(&mut self) -> Option<usize> {
-        self.searcher
-            .find_from_position(&self.haystack, self.position)
+        find_from_position(self.searcher, &self.haystack, self.position)
             .and_then(|position| {
-                self.position = position + 1;
+                if self.overlapping_matches {
+                    self.position = position + 1;
+                } else {
+                    self.position = position + self.searcher.needle.len();
+                }
                 Some(position)
             })
     }
 }
-
-
 
 #[cfg(test)]
 pub mod test {
