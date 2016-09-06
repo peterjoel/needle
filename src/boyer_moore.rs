@@ -10,6 +10,14 @@
 //! ```
 use std::cmp::max;
 
+trait NeedleSkip {
+    fn skip_offset(&self, bad_char: u8, needle_position: usize) -> usize;
+
+    fn len(&self) -> usize;
+
+    fn char_at(&self, index: usize) -> u8;
+}
+
 pub struct BoyerMoore <'a> {
     needle: &'a [u8],
     bad_chars: [usize; 256],
@@ -23,35 +31,6 @@ impl <'a> BoyerMoore <'a> {
             bad_chars: build_bad_chars_table(&needle),
             good_suffixes: build_good_suffixes_table(&needle),
         }
-    }
-
-    #[inline]
-    fn get_bad_char_offset(&self, bad_char: u8) -> usize {
-        self.bad_chars[bad_char as usize]
-    }
-
-    #[inline]
-    fn get_good_suffix_offset(&self, needle_position: usize) -> usize {
-        self.good_suffixes[needle_position]
-
-    }
-
-    fn find_from_position(&self, haystack: &'a [u8], mut position: usize) -> Option<usize> {
-        let max_position = haystack.len() - self.needle.len(); 
-        while position <= max_position {
-            let mut needle_position = self.needle.len() - 1;
-            while haystack[position + needle_position] == self.needle[needle_position] {
-                if needle_position == 0 {
-                    return Some(position);
-                } else {
-                    needle_position -= 1;
-                }
-            }
-            let bad_char = haystack[position + self.needle.len() - 1];
-            position += max(self.get_bad_char_offset(bad_char),
-                            self.get_good_suffix_offset(needle_position));
-        }
-        None
     }
 
     pub fn first_index<'b>(&'b self, haystack: &'b [u8]) -> Option<usize> {
@@ -100,6 +79,22 @@ impl <'a> BoyerMoore <'a> {
     }
 }
 
+impl <'a> NeedleSkip for &'a BoyerMoore <'a> {
+    #[inline]
+    fn skip_offset(&self, bad_char: u8, needle_position: usize) -> usize {
+        max(self.bad_chars[bad_char as usize], self.good_suffixes[needle_position])
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.needle.len()
+    }
+
+    #[inline]
+    fn char_at(&self, index: usize) -> u8 {
+        self.needle[index]
+    }
+}
 
 pub struct BoyerMooreIter <'a> {
     searcher: &'a BoyerMoore<'a>,
@@ -108,12 +103,10 @@ pub struct BoyerMooreIter <'a> {
     overlapping_matches: bool,
 }
 
-
 impl <'a> Iterator for BoyerMooreIter<'a> {
     type Item = usize;
     fn next(&mut self) -> Option<usize> {
-        self.searcher
-            .find_from_position(&self.haystack, self.position)
+        find_from_position(&self.searcher, &self.haystack, self.position)
             .and_then(|position| {
                 if self.overlapping_matches {
                     self.position = position + 1;
@@ -125,6 +118,128 @@ impl <'a> Iterator for BoyerMooreIter<'a> {
     }
 }
 
+pub struct Horspool <'a> {
+    needle: &'a [u8],
+    bad_chars: [usize; 256],
+}
+
+
+impl <'a> Horspool <'a> {
+    pub fn new(needle: &'a [u8]) -> Horspool {
+        Horspool { 
+            needle: needle,
+            bad_chars: build_bad_chars_table(&needle),
+        }
+    }
+
+    #[inline]
+    fn get_bad_char_offset(&self, bad_char: u8) -> usize {
+        self.bad_chars[bad_char as usize]
+    }
+
+
+    pub fn first_index<'b>(&'b self, haystack: &'b [u8]) -> Option<usize> {
+        self.find_in(&haystack).next()
+    }
+
+
+    /// Returns an iterator that will produce the indices of the needle in the haystack.
+    /// This iterator will not find overlapping matches; the first character of a match 
+    /// will start after the last character of the previous match.
+    ///
+    /// # Example
+    /// ```
+    /// use needle::Horspool;
+    /// let needle = Horspool::new(b"aaba");
+    /// let haystack = b"aabaabaabaabaaba";
+    /// assert_eq!(vec![0,6,12], needle.find_in(haystack).collect::<Vec<usize>>());
+    /// ```
+    pub fn find_in<'b>(&'b self, haystack: &'b [u8]) -> HorspoolIter {
+        HorspoolIter {
+            searcher: &self,
+            haystack: &haystack,
+            position: 0,
+            overlapping_matches: false,
+        }
+    }
+
+    /// Returns an iterator that will produce the indices of the needle in the haystack.
+    /// This iterator will find overlapping matches; the first character of a match is 
+    /// allowed to be matched from within the previous match.
+    ///
+    /// # Example
+    /// ```
+    /// use needle::Horspool;
+    /// let needle = Horspool::new(b"aaba");
+    /// let haystack = b"aabaabaabaabaaba";
+    /// assert_eq!(vec![0,3,6,9,12], needle.find_overlapping_in(haystack).collect::<Vec<usize>>());
+    /// ```
+    pub fn find_overlapping_in<'b>(&'b self, haystack: &'b [u8]) -> HorspoolIter {
+        HorspoolIter {
+            searcher: &self,
+            haystack: &haystack,
+            position: 0,
+            overlapping_matches: true
+        }
+    }
+}
+
+impl <'a> NeedleSkip for &'a Horspool <'a> {
+    #[inline]
+    fn skip_offset(&self, bad_char: u8, needle_position: usize) -> usize {
+        self.bad_chars[bad_char as usize]
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.needle.len()
+    }
+
+    #[inline]
+    fn char_at(&self, index: usize) -> u8 {
+        self.needle[index]
+    }
+}
+
+pub struct HorspoolIter <'a> {
+    searcher: &'a Horspool<'a>,
+    haystack: &'a [u8],
+    position: usize,
+    overlapping_matches: bool,
+}
+
+
+impl <'a> Iterator for HorspoolIter<'a> {
+    type Item = usize;
+    fn next(&mut self) -> Option<usize> {
+        find_from_position(&self.searcher, &self.haystack, self.position)
+            .and_then(|position| {
+                if self.overlapping_matches {
+                    self.position = position + 1;
+                } else {
+                    self.position = position + self.searcher.needle.len();
+                }
+                Some(position)
+            })
+    }
+}
+
+fn find_from_position<'a, N:NeedleSkip>(needle: &'a N, haystack: &'a [u8], mut position: usize) -> Option<usize> {
+    let max_position = haystack.len() - needle.len(); 
+    while position <= max_position {
+        let mut needle_position = needle.len() - 1;
+        while haystack[position + needle_position] == needle.char_at(needle_position) {
+            if needle_position == 0 {
+                return Some(position);
+            } else {
+                needle_position -= 1;
+            }
+        }
+        let bad_char = haystack[position + needle.len() - 1];
+        position += needle.skip_offset(bad_char, needle_position);
+    }
+    None
+}
 
 // Bad characters table is used for when the last (rightmost) character of the needle doesn't match. The table
 // gives the number of elements to skip, to find a character that does match.
@@ -224,9 +339,8 @@ pub mod test {
 
     #[test]
     pub fn test_bad_char() {
-        let needle = BoyerMoore::new(b"abacac");
         let haystack = b"acacacababadabacacad";
-        assert_eq!(Some(12), needle.first_index(haystack));
+        assert_eq!(Some(12), BoyerMoore::new(b"abacac").first_index(haystack));
     }
 
 
