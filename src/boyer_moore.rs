@@ -11,14 +11,16 @@
 use std::cmp::max;
 use skip_search::*;
 
-pub struct BoyerMoore <'a> {
-    needle: &'a [u8],
+pub struct BoyerMoore <'a, T:'a> {
+    needle: &'a [T],
     bad_chars: [usize; 256],
     good_suffixes: Vec<usize>,
 }
 
-impl <'a> BoyerMoore <'a> {
-    pub fn new(needle: &'a [u8]) -> BoyerMoore {
+impl <'a, T> BoyerMoore <'a, T>
+    where T: Copy + PartialEq + Into<usize>
+{
+    pub fn new(needle: &'a [T]) -> BoyerMoore<T> {
         BoyerMoore { 
             needle: needle,
             bad_chars: build_bad_chars_table(&needle),
@@ -26,7 +28,7 @@ impl <'a> BoyerMoore <'a> {
         }
     }
 
-    pub fn first_index<'b>(&'b self, haystack: &'b [u8]) -> Option<usize> {
+    pub fn first_index<'b>(&'b self, haystack: &'b [T]) -> Option<usize> {
         self.find_in(&haystack).next()
     }
 
@@ -42,10 +44,10 @@ impl <'a> BoyerMoore <'a> {
     /// let haystack = b"aabaabaabaabaaba";
     /// assert_eq!(vec![0,6,12], needle.find_in(haystack).collect::<Vec<usize>>());
     /// ```
-    pub fn find_in<'b>(&'b self, haystack: &'b [u8]) -> BoyerMooreIter {
+    pub fn find_in<'b>(&'b self, haystack: &'b [T]) -> BoyerMooreIter<T> {
         BoyerMooreIter {
             searcher: &self,
-            haystack: &haystack,
+            haystack: haystack,
             position: 0,
             overlapping_matches: false,
         }
@@ -62,7 +64,7 @@ impl <'a> BoyerMoore <'a> {
     /// let haystack = b"aabaabaabaabaaba";
     /// assert_eq!(vec![0,3,6,9,12], needle.find_overlapping_in(haystack).collect::<Vec<usize>>());
     /// ```
-    pub fn find_overlapping_in<'b>(&'b self, haystack: &'b [u8]) -> BoyerMooreIter {
+    pub fn find_overlapping_in<'b>(&'b self, haystack: &'b [T]) -> BoyerMooreIter<T> {
         BoyerMooreIter {
             searcher: &self,
             haystack: &haystack,
@@ -72,10 +74,12 @@ impl <'a> BoyerMoore <'a> {
     }
 }
 
-impl <'a> SkipSearch for &'a BoyerMoore <'a> {
+impl <'a, T> SkipSearch<T> for &'a BoyerMoore <'a, T>
+    where T: Copy + Into<usize>
+{
     #[inline]
-    fn skip_offset(&self, bad_char: u8, needle_position: usize) -> usize {
-        max(self.bad_chars[bad_char as usize], self.good_suffixes[needle_position])
+    fn skip_offset(&self, bad_char: T, needle_position: usize) -> usize {
+        max(self.bad_chars[bad_char.into()], self.good_suffixes[needle_position])
     }
 
     #[inline]
@@ -84,19 +88,21 @@ impl <'a> SkipSearch for &'a BoyerMoore <'a> {
     }
 
     #[inline]
-    fn char_at(&self, index: usize) -> u8 {
+    fn char_at(&self, index: usize) -> T {
         self.needle[index]
     }
 }
 
-pub struct BoyerMooreIter <'a> {
-    searcher: &'a BoyerMoore<'a>,
-    haystack: &'a [u8],
+pub struct BoyerMooreIter <'a, T:'a> {
+    searcher: &'a BoyerMoore<'a, T>,
+    haystack: &'a [T],
     position: usize,
     overlapping_matches: bool,
 }
 
-impl <'a> Iterator for BoyerMooreIter<'a> {
+impl <'a, T> Iterator for BoyerMooreIter<'a, T> 
+    where T: Copy + PartialEq + Into<usize>
+{
     type Item = usize;
     fn next(&mut self) -> Option<usize> {
         find_from_position(&self.searcher, &self.haystack, self.position)

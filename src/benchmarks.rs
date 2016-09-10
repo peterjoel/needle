@@ -5,9 +5,8 @@ use test::Bencher;
 use super::BoyerMoore;
 #[cfg(test)]
 use super::Horspool;
-#[cfg(test)]
-use super::naive::NaiveSearch;
-
+// #[cfg(test)]
+// use super::naive::NaiveSearch;
 
 #[bench]
 fn find_pi_100k_digits_boyer_moore(b: &mut Bencher) {
@@ -65,14 +64,14 @@ fn find_pi_100k_digits_horspool_with_precompute(b: &mut Bencher) {
     });
 }
 
-#[bench]
-fn find_pi_100k_digits_naive(b: &mut Bencher) {
-    let haystack = pi_100k_digits().as_bytes();
-    let needle = NaiveSearch::new(subsequence().as_bytes());
-    b.iter(|| {
-        assert_eq!(Some(76_842), needle.first_index(&haystack))
-    });
-}
+// #[bench]
+// fn find_pi_100k_digits_naive(b: &mut Bencher) {
+//     let haystack = pi_100k_digits().as_bytes();
+//     let needle = NaiveSearch::new(subsequence().as_bytes());
+//     b.iter(|| {
+//         assert_eq!(Some(76_842), needle.first_index(&haystack))
+//     });
+// }
 
 #[bench]
 fn find_pi_100k_digits_std_str(b: &mut Bencher) {

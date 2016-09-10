@@ -1,20 +1,32 @@
+//! Implementation of the Boyer-Moore-Hospool search algorithm
+//!
+//! # Examples
+//!
+//! ```
+//! use needle::BoyerMoore;
+//! let needle = BoyerMoore::new(b"example");
+//! let haystack = b"This is an example of searching for a word";
+//! assert_eq!(Some(11), needle.find_in(haystack).next());
+//! ```
 use skip_search::*;
 
-pub struct Horspool <'a> {
-    needle: &'a [u8],
+pub struct Horspool <'a, T:'a> {
+    needle: &'a [T],
     bad_chars: [usize; 256],
 }
 
 
-impl <'a> Horspool <'a> {
-    pub fn new(needle: &'a [u8]) -> Horspool {
+impl <'a, T> Horspool <'a, T>
+    where T: Copy + PartialEq + Into<usize>
+{
+    pub fn new(needle: &'a [T]) -> Horspool<T> {
         Horspool { 
             needle: needle,
             bad_chars: build_bad_chars_table(&needle),
         }
     }
 
-    pub fn first_index<'b>(&'b self, haystack: &'b [u8]) -> Option<usize> {
+    pub fn first_index<'b>(&'b self, haystack: &'b [T]) -> Option<usize> {
         self.find_in(&haystack).next()
     }
 
@@ -30,10 +42,10 @@ impl <'a> Horspool <'a> {
     /// let haystack = b"aabaabaabaabaaba";
     /// assert_eq!(vec![0,6,12], needle.find_in(haystack).collect::<Vec<usize>>());
     /// ```
-    pub fn find_in<'b>(&'b self, haystack: &'b [u8]) -> HorspoolIter {
+    pub fn find_in<'b>(&'b self, haystack: &'b [T]) -> HorspoolIter<T> {
         HorspoolIter {
             searcher: &self,
-            haystack: &haystack,
+            haystack: haystack,
             position: 0,
             overlapping_matches: false,
         }
@@ -50,7 +62,7 @@ impl <'a> Horspool <'a> {
     /// let haystack = b"aabaabaabaabaaba";
     /// assert_eq!(vec![0,3,6,9,12], needle.find_overlapping_in(haystack).collect::<Vec<usize>>());
     /// ```
-    pub fn find_overlapping_in<'b>(&'b self, haystack: &'b [u8]) -> HorspoolIter {
+    pub fn find_overlapping_in<'b>(&'b self, haystack: &'b [T]) -> HorspoolIter<T> {
         HorspoolIter {
             searcher: &self,
             haystack: &haystack,
@@ -60,10 +72,12 @@ impl <'a> Horspool <'a> {
     }
 }
 
-impl <'a> SkipSearch for &'a Horspool <'a> {
+impl <'a, T> SkipSearch<T> for &'a Horspool <'a, T>
+    where T: Copy + Into<usize>
+{
     #[inline]
-    fn skip_offset(&self, bad_char: u8, _: usize) -> usize {
-        self.bad_chars[bad_char as usize]
+    fn skip_offset(&self, bad_char: T, _: usize) -> usize {
+        self.bad_chars[bad_char.into()]
     }
 
     #[inline]
@@ -72,20 +86,22 @@ impl <'a> SkipSearch for &'a Horspool <'a> {
     }
 
     #[inline]
-    fn char_at(&self, index: usize) -> u8 {
+    fn char_at(&self, index: usize) -> T {
         self.needle[index]
     }
 }
 
-pub struct HorspoolIter <'a> {
-    searcher: &'a Horspool<'a>,
-    haystack: &'a [u8],
+pub struct HorspoolIter <'a, T:'a> {
+    searcher: &'a Horspool<'a, T>,
+    haystack: &'a [T],
     position: usize,
     overlapping_matches: bool,
 }
 
 
-impl <'a> Iterator for HorspoolIter<'a> {
+impl <'a, T> Iterator for HorspoolIter<'a, T> 
+    where T: Copy + PartialEq + Into<usize>
+{
     type Item = usize;
     fn next(&mut self) -> Option<usize> {
         find_from_position(&self.searcher, &self.haystack, self.position)

@@ -1,15 +1,18 @@
 //! The skip-search logic that is common to both Boyer-Moore and Horspool.
 
 
-pub trait SkipSearch {
-    fn skip_offset(&self, bad_char: u8, needle_position: usize) -> usize;
+pub trait SkipSearch<T> {
+    fn skip_offset(&self, bad_char: T, needle_position: usize) -> usize;
 
     fn len(&self) -> usize;
 
-    fn char_at(&self, index: usize) -> u8;
+    fn char_at(&self, index: usize) -> T;
 }
 
-pub fn find_from_position<'a, N:SkipSearch>(needle: &'a N, haystack: &'a [u8], mut position: usize) -> Option<usize> {
+pub fn find_from_position<'a, T, N>(needle: &'a N, haystack: &'a [T], mut position: usize) -> Option<usize>
+    where T: PartialEq + Into<usize> + Copy, 
+          N: SkipSearch<T>
+{
     let max_position = haystack.len() - needle.len(); 
     while position <= max_position {
         let mut needle_position = needle.len() - 1;
@@ -28,10 +31,12 @@ pub fn find_from_position<'a, N:SkipSearch>(needle: &'a N, haystack: &'a [u8], m
 
 // Bad characters table is used for when the last (rightmost) character of the needle doesn't match. The table
 // gives the number of elements to skip, to find a character that does match.
-pub fn build_bad_chars_table(needle: &[u8]) -> [usize; 256] {
+pub fn build_bad_chars_table<T>(needle: &[T]) -> [usize; 256] 
+    where T: Into<usize> + Copy 
+{
     let mut table = [needle.len(); 256];
     for i in 0 .. needle.len() - 1 {
-        let c = needle[i] as usize;
+        let c: usize = needle[i].into();
         table[c] = needle.len() - i - 1;
     }
     table
@@ -39,7 +44,7 @@ pub fn build_bad_chars_table(needle: &[u8]) -> [usize; 256] {
 
 // Produces a table, whose indices are indices of needle, and whose entries are the size of 
 // the largest suffix of needle that matches the substring ending at that index
-fn get_suffix_table(needle: &[u8]) -> Vec<usize> {
+fn get_suffix_table<T: PartialEq>(needle: &[T]) -> Vec<usize> {
     // The algorthm builds the table in steps as follows:
     // a b c b a b c a b a b | suffix (length)
     // --------------------- | ------
@@ -68,7 +73,7 @@ fn get_suffix_table(needle: &[u8]) -> Vec<usize> {
 
 // When a suffix of the needle matches, but fails at the next character, this table gives the number of 
 // elements to skip, to find another subsequence that matches the suffix but with a different preceding character.
-pub fn build_good_suffixes_table(needle: &[u8]) -> Vec<usize> {
+pub fn build_good_suffixes_table<T: PartialEq>(needle: &[T]) -> Vec<usize> {
     let suffixes = get_suffix_table(&needle);
     let len = needle.len();
     let mut table = vec![len - 1; len];
