@@ -1,4 +1,7 @@
-//! Implementation of the Boyer-Moore-Hospool search algorithm
+//! Implementation of the Boyer-Moore-Horspool search algorithm, which is essentially
+//! the Boyer-Moore algorithm but without the good suffix rule. In most common cases, 
+//! it is faster than Boyer-Moore, but there are some pathological cases, involving 
+//! densely repeating patterns, where the suffix rule actually offers an improvement.
 //!
 //! # Examples
 //!
@@ -26,10 +29,10 @@ impl <'a, T> Horspool <'a, T>
         }
     }
 
-    pub fn first_index<'b>(&'b self, haystack: &'b [T]) -> Option<usize> {
+    /// Finds the first occurence of the search term in haystack and returns the index if it is found.
+    pub fn find_first_in<'b>(&'b self, haystack: &'b [T]) -> Option<usize> {
         self.find_in(&haystack).next()
     }
-
 
     /// Returns an iterator that will produce the indices of the needle in the haystack.
     /// This iterator will not find overlapping matches; the first character of a match 

@@ -1,14 +1,17 @@
-//! The skip-search logic that is common to both Boyer-Moore and Horspool.
-
-
+//! The skip-search logic for Boyer-Moore algorithm
 pub trait SkipSearch<T> {
+    /// Given `bad_char`, a character from haystack that didn't match with the character in the needle at 
+    /// `needle_position`, calculate how many characters can be skipped 
     fn skip_offset(&self, bad_char: T, needle_position: usize) -> usize;
 
+    /// The number of characters in the needle
     fn len(&self) -> usize;
 
+    /// Retrieve a character from the index within needle
     fn char_at(&self, index: usize) -> T;
 }
 
+/// Find needle in haystack, starting at position within haystack
 pub fn find_from_position<'a, T, N>(needle: &'a N, haystack: &'a [T], mut position: usize) -> Option<usize>
     where T: PartialEq + Into<usize> + Copy, 
           N: SkipSearch<T>
@@ -44,7 +47,7 @@ pub fn build_bad_chars_table<T>(needle: &[T]) -> [usize; 256]
 
 // Produces a table, whose indices are indices of needle, and whose entries are the size of 
 // the largest suffix of needle that matches the substring ending at that index
-fn get_suffix_table<T: PartialEq>(needle: &[T]) -> Vec<usize> {
+pub fn get_suffix_table<T: PartialEq>(needle: &[T]) -> Vec<usize> {
     // The algorthm builds the table in steps as follows:
     // a b c b a b c a b a b | suffix (length)
     // --------------------- | ------
@@ -90,26 +93,30 @@ pub fn build_good_suffixes_table<T: PartialEq>(needle: &[T]) -> Vec<usize> {
 }
 
 
+#[cfg(test)]
+mod test {
+    use super::*;
 
-#[test]
-pub fn test_good_suffix_table2() {
-    let needle = "GCAGAGAG".as_bytes();
-    let table = build_good_suffixes_table(&needle);
-    assert_eq!(vec![7,7,7,2,7,4,7,1], table);
-}
-
-
-#[test]
-pub fn test_suffix_table() {
-    let needle = "abcbabcabab".as_bytes();
-    let table = get_suffix_table(&needle);
-    assert_eq!(vec![0,2,0,1,0,3,0,0,2,0,0], table);
-}
+    #[test]
+    pub fn test_good_suffix_table2() {
+        let needle = "GCAGAGAG".as_bytes();
+        let table = build_good_suffixes_table(&needle);
+        assert_eq!(vec![7,7,7,2,7,4,7,1], table);
+    }
 
 
-#[test]
-pub fn test_good_suffix_table() {
-    let needle = "abcbabcabab".as_bytes();
-    let table = build_good_suffixes_table(&needle);
-    assert_eq!(vec![10,10,10,10,10,10,10,5,2,7,1], table);
+    #[test]
+    pub fn test_suffix_table() {
+        let needle = "abcbabcabab".as_bytes();
+        let table = get_suffix_table(&needle);
+        assert_eq!(vec![0,2,0,1,0,3,0,0,2,0,0], table);
+    }
+
+
+    #[test]
+    pub fn test_good_suffix_table() {
+        let needle = "abcbabcabab".as_bytes();
+        let table = build_good_suffixes_table(&needle);
+        assert_eq!(vec![10,10,10,10,10,10,10,5,2,7,1], table);
+    }
 }

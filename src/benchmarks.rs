@@ -5,73 +5,42 @@ use test::Bencher;
 use super::BoyerMoore;
 #[cfg(test)]
 use super::Horspool;
-// #[cfg(test)]
-// use super::naive::NaiveSearch;
 
 #[bench]
 fn find_pi_100k_digits_boyer_moore(b: &mut Bencher) {
     let haystack = pi_100k_digits().as_bytes();
-    let needle = BoyerMoore::new(subsequence().as_bytes());
     b.iter(|| {
-        assert_eq!(Some(76_842), needle.first_index(&haystack))
-    });
-}
-
-
-#[bench]
-fn find_pi_100k_digits_boyer_moore_iter_first(b: &mut Bencher) {
-    let haystack = pi_100k_digits().as_bytes();
-    let needle = BoyerMoore::new(subsequence().as_bytes());
-    b.iter(|| {
-        assert_eq!(Some(76_842), needle.find_in(&haystack).next())
+        let needle = BoyerMoore::new(subsequence().as_bytes());
+        assert_eq!(Some(99_901), needle.find_first_in(&haystack))
     });
 }
 
 #[bench]
 fn find_pi_100k_digits_boyer_moore_with_precompute(b: &mut Bencher) {
     let haystack = pi_100k_digits().as_bytes();;
+    let needle = BoyerMoore::new(subsequence().as_bytes());
     b.iter(|| {
-        let needle = BoyerMoore::new(subsequence().as_bytes());
-        assert_eq!(Some(76_842), needle.first_index(&haystack))
+        assert_eq!(Some(99_901), needle.find_first_in(&haystack))
     });
 }
 
 #[bench]
 fn find_pi_100k_digits_horspool(b: &mut Bencher) {
     let haystack = pi_100k_digits().as_bytes();
-    let needle = Horspool::new(subsequence().as_bytes());
     b.iter(|| {
-        assert_eq!(Some(76_842), needle.first_index(&haystack))
-    });
-}
-
-
-#[bench]
-fn find_pi_100k_digits_horspool_iter_first(b: &mut Bencher) {
-    let haystack = pi_100k_digits().as_bytes();
-    let needle = Horspool::new(subsequence().as_bytes());
-    b.iter(|| {
-        assert_eq!(Some(76_842), needle.find_in(&haystack).next())
+        let needle = Horspool::new(subsequence().as_bytes());
+        assert_eq!(Some(99_901), needle.find_first_in(&haystack))
     });
 }
 
 #[bench]
 fn find_pi_100k_digits_horspool_with_precompute(b: &mut Bencher) {
-    let haystack = pi_100k_digits().as_bytes();;
+    let haystack = pi_100k_digits().as_bytes();
+    let needle = Horspool::new(subsequence().as_bytes());
     b.iter(|| {
-        let needle = Horspool::new(subsequence().as_bytes());
-        assert_eq!(Some(76_842), needle.first_index(&haystack))
+        assert_eq!(Some(99_901), needle.find_first_in(&haystack))
     });
 }
-
-// #[bench]
-// fn find_pi_100k_digits_naive(b: &mut Bencher) {
-//     let haystack = pi_100k_digits().as_bytes();
-//     let needle = NaiveSearch::new(subsequence().as_bytes());
-//     b.iter(|| {
-//         assert_eq!(Some(76_842), needle.first_index(&haystack))
-//     });
-// }
 
 #[bench]
 fn find_pi_100k_digits_std_str(b: &mut Bencher) {
@@ -79,12 +48,12 @@ fn find_pi_100k_digits_std_str(b: &mut Bencher) {
     let haystack = pi_100k_digits();
     b.iter(|| {
         let index = haystack.find(subsequence());
-        assert_eq!(Some(76_842), index)
+        assert_eq!(Some(99_901), index)
     });
 }
 
 #[cfg(test)]
-fn subsequence<'a>() -> &'a str { "87935356652125562013998824962847872621443236285367650259145046837763528258765213" } 
+fn subsequence<'a>() -> &'a str { "9857501636341131462753049901913564682380432997069577015078933772865803571279091376742080565549362541" } 
 
 #[cfg(test)]
 fn pi_100k_digits<'a>() -> &'a str {

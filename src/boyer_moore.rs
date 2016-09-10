@@ -20,6 +20,9 @@ pub struct BoyerMoore <'a, T:'a> {
 impl <'a, T> BoyerMoore <'a, T>
     where T: Copy + PartialEq + Into<usize>
 {
+    /// Construct a new Boyer-Moore search object, and pre-compute the skip tables.
+    /// If you intend to search for the same needle in multiple haystacks, it is more
+    /// efficient to create just one instance and the re-use it."]
     pub fn new(needle: &'a [T]) -> BoyerMoore<T> {
         BoyerMoore { 
             needle: needle,
@@ -28,10 +31,10 @@ impl <'a, T> BoyerMoore <'a, T>
         }
     }
 
-    pub fn first_index<'b>(&'b self, haystack: &'b [T]) -> Option<usize> {
+    /// Finds the first occurence of the search term in haystack and returns the index if it is found.
+    pub fn find_first_in<'b>(&'b self, haystack: &'b [T]) -> Option<usize> {
         self.find_in(&haystack).next()
     }
-
 
     /// Returns an iterator that will produce the indices of the needle in the haystack.
     /// This iterator will not find overlapping matches; the first character of a match 
@@ -127,14 +130,14 @@ pub mod test {
     pub fn test_simple() {
         let needle = BoyerMoore::new(b"ghi");
         let haystack = b"abc def ghi jkl";
-        assert_eq!(Some(8), needle.first_index(haystack));
+        assert_eq!(Some(8), needle.find_first_in(haystack));
     }
 
 
     #[test]
     pub fn test_bad_char() {
         let haystack = b"acacacababadabacacad";
-        assert_eq!(Some(12), BoyerMoore::new(b"abacac").first_index(haystack));
+        assert_eq!(Some(12), BoyerMoore::new(b"abacac").find_first_in(haystack));
     }
 
 
@@ -142,15 +145,15 @@ pub mod test {
     pub fn test_bad_char2() {
         let needle = BoyerMoore::new(b"abacab");
         let haystack = b"acacacababadabacabad";
-        assert_eq!(Some(12), needle.first_index(haystack));
+        assert_eq!(Some(12), needle.find_first_in(haystack));
     }
 
     #[test]
     pub fn test_search_twice() {
         let needle = BoyerMoore::new(b"xyz");
         let haystack = b"01xyzxyz901xyz56xyz";
-        assert_eq!(Some(2), needle.first_index(haystack));
-        assert_eq!(Some(2), needle.first_index(haystack));
+        assert_eq!(Some(2), needle.find_first_in(haystack));
+        assert_eq!(Some(2), needle.find_first_in(haystack));
     }
 
 
