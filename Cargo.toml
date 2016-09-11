@@ -1,6 +1,11 @@
 [package]
 name = "needle"
 version = "0.1.0"
-authors = ["peter <peter.hall@algomi.com>"]
+authors = ["Peter Hall"]
+repository = "https://github.com/peterjoel/needle"
+readme = "README.md"
+keywords = ["search", "find", "boyer", "moore", "horspool"]
+license = "MIT"
+description = "Fast search functions for finding things in Strings, Arrays and iterators."
 
 [dependencies]
