@@ -12,42 +12,48 @@ pub trait SkipSearch<T> {
 }
 
 /// Find needle in haystack, starting at position within haystack
-pub fn find_from_position<'a, T, N>(needle: &'a N, haystack: &'a [T], mut position: usize) -> Option<usize>
-    where T: PartialEq + Into<usize> + Copy, 
-          N: SkipSearch<T>
+pub fn find_from_position<'a, T, H: ?Sized, S>(searcher: &'a S, haystack: &'a H, mut position: usize) -> Option<usize>
+    where T: PartialEq + Into<usize> + Copy,
+          H: Searchable<Item = T>,
+          S: SkipSearch<T>
 {
-    let max_position = haystack.len() - needle.len(); 
+    let max_position = haystack.num_items() - searcher.len(); 
     while position <= max_position {
-        let mut needle_position = needle.len() - 1;
-        while haystack[position + needle_position] == needle.char_at(needle_position) {
+        let mut needle_position = searcher.len() - 1;
+        while haystack.item_at(position + needle_position) == searcher.char_at(needle_position) {
             if needle_position == 0 {
                 return Some(position);
             } else {
                 needle_position -= 1;
             }
         }
-        let bad_char = haystack[position + needle.len() - 1];
-        position += needle.skip_offset(bad_char, needle_position);
+        let bad_char = haystack.item_at(position + searcher.len() - 1);
+        position += searcher.skip_offset(bad_char, needle_position);
     }
     None
 }
 
 // Bad characters table is used for when the last (rightmost) character of the needle doesn't match. The table
 // gives the number of elements to skip, to find a character that does match.
-pub fn build_bad_chars_table<T>(needle: &[T]) -> [usize; 256] 
-    where T: Into<usize> + Copy 
+pub fn build_bad_chars_table<T, H: ?Sized>(needle: &H) -> [usize; 256]
+    where T: Into<usize> + Copy,
+          H: Searchable<Item = T>
 {
-    let mut table = [needle.len(); 256];
-    for i in 0 .. needle.len() - 1 {
-        let c: usize = needle[i].into();
-        table[c] = needle.len() - i - 1;
+    let mut table = [needle.num_items(); 256];
+    let num_items = needle.num_items();
+    for i in 0 .. num_items - 1 {
+        let c: usize = needle.item_at(i).into();
+        table[c] = num_items - i - 1;
     }
     table
 }
 
 // Produces a table, whose indices are indices of needle, and whose entries are the size of 
 // the largest suffix of needle that matches the substring ending at that index
-pub fn get_suffix_table<T: PartialEq>(needle: &[T]) -> Vec<usize> {
+pub fn get_suffix_table<T, H: ?Sized>(needle: &H) -> Vec<usize>
+    where T: PartialEq,
+          H: Searchable<Item = T>
+{
     // The algorthm builds the table in steps as follows:
     // a b c b a b c a b a b | suffix (length)
     // --------------------- | ------
@@ -56,13 +62,13 @@ pub fn get_suffix_table<T: PartialEq>(needle: &[T]) -> Vec<usize> {
     // 0 2 0 1 0 3 0 0 2 0 3 |   b a b (3)
     // 0 2 0 1 0 3 0 0 2 0 4 | a b a b (4)
     // etc..
-    let len = needle.len();
+    let len = needle.num_items();
     let mut suffixes = vec![0; len];
-    for suffix_len in 1 .. needle.len() {
+    for suffix_len in 1 .. len {
         let mut found_suffix = false;
         for i in (0 .. len - suffix_len).rev() {
             // either 0 or a previous match for a 1-smaller suffix
-            if suffixes[i + suffix_len - 1] == suffix_len - 1 && needle[i] == needle[len - suffix_len] {
+            if suffixes[i + suffix_len - 1] == suffix_len - 1 && needle.item_at(i) == needle.item_at(len - suffix_len) {
                 suffixes[i + suffix_len - 1] = suffix_len;
                 found_suffix = true;
             }
@@ -76,9 +82,12 @@ pub fn get_suffix_table<T: PartialEq>(needle: &[T]) -> Vec<usize> {
 
 // When a suffix of the needle matches, but fails at the next character, this table gives the number of 
 // elements to skip, to find another subsequence that matches the suffix but with a different preceding character.
-pub fn build_good_suffixes_table<T: PartialEq>(needle: &[T]) -> Vec<usize> {
-    let suffixes = get_suffix_table(&needle);
-    let len = needle.len();
+pub fn build_good_suffixes_table<T, H: ?Sized>(needle: &H) -> Vec<usize> 
+    where T: PartialEq,
+          H: Searchable<Item = T>
+{
+    let suffixes = get_suffix_table(*&needle);
+    let len = needle.num_items();
     let mut table = vec![len - 1; len];
 
     for (i, suffix_len) in suffixes.into_iter().enumerate() {
@@ -93,6 +102,58 @@ pub fn build_good_suffixes_table<T: PartialEq>(needle: &[T]) -> Vec<usize> {
 }
 
 
+// pub trait SearchIterable<T> {
+//     type SearchIter: Iterator<Item = T>;
+//     default type SearchOverlappingIter = SearchIter; 
+
+//     fn find_in<'b>(&'b self, haystack: &'b [T]) -> SearchIter;
+//     fn find_overlapping_in<'b>(&'b self, haystack: &'b [T]) -> SearchOverlappingIter;
+// }
+
+pub trait Searchable {
+    type Item;
+
+    fn num_items(&self) -> usize;
+    fn item_at(&self, index: usize) -> Self::Item;
+}
+
+impl <T: Copy> Searchable for [T] {
+    type Item = T;
+
+    fn num_items(&self) -> usize {
+        self.len()
+    }
+
+    fn item_at(&self, index: usize) -> Self::Item {
+        self[index]
+    }   
+}
+
+impl <'a, T: Copy> Searchable for &'a [T] {
+    type Item = T;
+
+    fn num_items(&self) -> usize {
+        self.len()
+    }
+
+    fn item_at(&self, index: usize) -> Self::Item {
+        self[index]
+    }   
+}
+
+impl Searchable for String {
+    type Item = char;
+
+    fn num_items(&self) -> usize {
+        self.len()
+    }
+
+    fn item_at(&self, index: usize) -> Self::Item {
+        // XXX Um.. this can't be fast...
+        self.chars().nth(index).unwrap()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -100,7 +161,7 @@ mod test {
     #[test]
     pub fn test_good_suffix_table2() {
         let needle = "GCAGAGAG".as_bytes();
-        let table = build_good_suffixes_table(&needle);
+        let table = build_good_suffixes_table(needle);
         assert_eq!(vec![7,7,7,2,7,4,7,1], table);
     }
 
@@ -108,7 +169,7 @@ mod test {
     #[test]
     pub fn test_suffix_table() {
         let needle = "abcbabcabab".as_bytes();
-        let table = get_suffix_table(&needle);
+        let table = get_suffix_table(needle);
         assert_eq!(vec![0,2,0,1,0,3,0,0,2,0,0], table);
     }
 
@@ -116,7 +177,7 @@ mod test {
     #[test]
     pub fn test_good_suffix_table() {
         let needle = "abcbabcabab".as_bytes();
-        let table = build_good_suffixes_table(&needle);
+        let table = build_good_suffixes_table(needle);
         assert_eq!(vec![10,10,10,10,10,10,10,5,2,7,1], table);
     }
 }
