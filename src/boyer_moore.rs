@@ -27,9 +27,9 @@ impl <'a, H: ?Sized, T> BoyerMoore <'a, H>
     /// efficient to create just one instance and the re-use it."]
     pub fn new(needle: &'a H) -> BoyerMoore<'a, H> {
         BoyerMoore { 
-            needle: *&needle,
-            bad_chars: build_bad_chars_table(*&needle),
-            good_suffixes: build_good_suffixes_table(*&needle),
+            needle: needle,
+            bad_chars: build_bad_chars_table(needle),
+            good_suffixes: build_good_suffixes_table(needle),
         }
     }
 

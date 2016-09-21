@@ -86,7 +86,7 @@ pub fn build_good_suffixes_table<T, H: ?Sized>(needle: &H) -> Vec<usize>
     where T: PartialEq,
           H: Searchable<Item = T>
 {
-    let suffixes = get_suffix_table(*&needle);
+    let suffixes = get_suffix_table(needle);
     let len = needle.num_items();
     let mut table = vec![len - 1; len];
 

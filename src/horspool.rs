@@ -25,8 +25,8 @@ impl <'a, H: ?Sized, T> Horspool <'a, H>
 {
     pub fn new(needle: &'a H) -> Horspool<H> {
         Horspool { 
-            needle: *&needle,
-            bad_chars: build_bad_chars_table(*&needle),
+            needle: needle,
+            bad_chars: build_bad_chars_table(needle),
         }
     }
 
