@@ -2,10 +2,12 @@
 #![feature(test)]
 extern crate test;
 
-pub mod boyer_moore;
+#[cfg(test)]
 mod benchmarks;
-mod skip_search;
+
+pub mod boyer_moore;
 mod horspool;
+mod skip_search;
 
 pub use boyer_moore::BoyerMoore;
 pub use horspool::Horspool;
