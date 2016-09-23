@@ -1,7 +1,7 @@
 use test::Bencher;
 use super::BoyerMoore;
 use super::Horspool;
-
+use super::SearchIn;
 mod pi_digits;
 use self::pi_digits::pi_100k_digits;
 

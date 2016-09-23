@@ -6,33 +6,33 @@
 //! # Examples
 //!
 //! ```
-//! use needle::Horspool;
-//! let needle = Horspool::new(&b"example"[..]);
+//! use needle::{Horspool, SearchIn};
+//! let needle = Horspool::new(b"example");
 //! let haystack = b"This is an example of searching for a word";
 //! assert_eq!(Some(11), needle.find_in(haystack).next());
 //! ```
-use skip_search::{build_bad_chars_table, find_from_position, Searchable, SkipSearch};
+use skip_search::*;
+use super::SearchIn;
 
-pub struct Horspool <'a, H:'a + ?Sized> {
-    needle: &'a H,
+pub struct Horspool <'a, T:'a> {
+    needle: &'a [T],
     bad_chars: [usize; 256],
 }
 
 
-impl <'a, H: ?Sized, T> Horspool <'a, H>
-    where T: 'a + Copy + PartialEq + Into<usize>,
-          H: 'a + Searchable<Item = T>
+impl <'a, T> Horspool <'a, T>
+    where T: Copy + PartialEq + Into<usize>
 {
-    pub fn new(needle: &'a H) -> Horspool<H> {
+    pub fn new(needle: &'a [T]) -> Horspool<T> {
         Horspool { 
-            needle: *&needle,
-            bad_chars: build_bad_chars_table(*&needle),
+            needle: needle,
+            bad_chars: build_bad_chars_table(&needle),
         }
     }
 
     /// Finds the first occurence of the search term in haystack and returns the index if it is found.
-    pub fn find_first_in<'b>(&'b self, haystack: &'b H) -> Option<usize> {
-        self.find_in(haystack).next()
+    pub fn find_first_in<'b>(&'b self, haystack: &'b [T]) -> Option<usize> {
+        self.find_in(&haystack).next()
     }
 
     /// Returns an iterator that will produce the indices of the needle in the haystack.
@@ -41,15 +41,15 @@ impl <'a, H: ?Sized, T> Horspool <'a, H>
     ///
     /// # Example
     /// ```
-    /// use needle::Horspool;
-    /// let needle = Horspool::new(&b"aaba"[..]);
+    /// use needle::{Horspool, SearchIn};
+    /// let needle = Horspool::new(b"aaba");
     /// let haystack = b"aabaabaabaabaaba";
     /// assert_eq!(vec![0,6,12], needle.find_in(haystack).collect::<Vec<usize>>());
     /// ```
-    pub fn find_in<'b>(&'b self, haystack: &'b H) -> HorspoolIter<T, H> {
+    pub fn find_in<'b>(&'b self, haystack: &'b [T]) -> HorspoolIter<T> {
         HorspoolIter {
             searcher: &self,
-            haystack: &haystack,
+            haystack: haystack,
             position: 0,
             overlapping_matches: false,
         }
@@ -61,12 +61,12 @@ impl <'a, H: ?Sized, T> Horspool <'a, H>
     ///
     /// # Example
     /// ```
-    /// use needle::Horspool;
-    /// let needle = Horspool::new(&b"aaba"[..]);
+    /// use needle::{Horspool, SearchIn};
+    /// let needle = Horspool::new(b"aaba");
     /// let haystack = b"aabaabaabaabaaba";
     /// assert_eq!(vec![0,3,6,9,12], needle.find_overlapping_in(haystack).collect::<Vec<usize>>());
     /// ```
-    pub fn find_overlapping_in<'b>(&'b self, haystack: &'b H) -> HorspoolIter<T, H> {
+    pub fn find_overlapping_in<'b>(&'b self, haystack: &'b [T]) -> HorspoolIter<T> {
         HorspoolIter {
             searcher: &self,
             haystack: &haystack,
@@ -76,9 +76,55 @@ impl <'a, H: ?Sized, T> Horspool <'a, H>
     }
 }
 
-impl <'a, H: ?Sized, T> SkipSearch<T> for Horspool <'a, H>
-    where H: Searchable<Item = T>,
-          T: Copy + Into<usize>
+impl <'a, T> SearchIn<'a, [T]> for Horspool<'a, T>
+    where T: Copy + PartialEq + Into<usize>
+{
+    type Iter = HorspoolIter<'a, T>;
+
+    /// Returns an iterator that will produce the indices of the needle in the haystack.
+    /// This iterator will not find overlapping matches; the first character of a match 
+    /// will start after the last character of the previous match.
+    ///
+    /// # Example
+    /// ```
+    /// use needle::{Horspool, SearchIn};
+    /// let needle = Horspool::new(b"aaba");
+    /// let haystack = b"aabaabaabaabaaba";
+    /// assert_eq!(vec![0,6,12], needle.find_in(haystack).collect::<Vec<usize>>());
+    /// ```
+    fn find_in(&'a self, haystack: &'a [T]) -> HorspoolIter<'a, T> {
+        HorspoolIter {
+            searcher: &self,
+            haystack: haystack,
+            position: 0,
+            overlapping_matches: false,
+        }
+    }
+
+    /// Returns an iterator that will produce the indices of the needle in the haystack.
+    /// This iterator will find overlapping matches; the first character of a match is 
+    /// allowed to be matched from within the previous match.
+    ///
+    /// # Example
+    /// ```
+    /// use needle::{Horspool, SearchIn};
+    /// let needle = Horspool::new(b"aaba");
+    /// let haystack = b"aabaabaabaabaaba";
+    /// assert_eq!(vec![0,3,6,9,12], needle.find_overlapping_in(haystack).collect::<Vec<usize>>());
+    /// ```
+    fn find_overlapping_in(&'a self, haystack: &'a [T]) -> HorspoolIter<'a, T> {
+        HorspoolIter {
+            searcher: &self,
+            haystack: &haystack,
+            position: 0,
+            overlapping_matches: true
+        }
+    }
+}
+
+
+impl <'a, T> SkipSearch<T> for &'a Horspool <'a, T>
+    where T: Copy + Into<usize>
 {
     #[inline]
     fn skip_offset(&self, bad_char: T, _: usize) -> usize {
@@ -87,102 +133,36 @@ impl <'a, H: ?Sized, T> SkipSearch<T> for Horspool <'a, H>
 
     #[inline]
     fn len(&self) -> usize {
-        self.needle.num_items()
+        self.needle.len()
     }
 
     #[inline]
     fn char_at(&self, index: usize) -> T {
-        self.needle.item_at(index)
+        self.needle[index]
     }
 }
 
-pub struct HorspoolIter <'a, T, H: ?Sized>
-    where T: 'a,
-          H: 'a + Searchable<Item = T>
-{
-    searcher: &'a Horspool<'a, H>,
-    haystack: &'a H,
+pub struct HorspoolIter <'a, T:'a> {
+    searcher: &'a Horspool<'a, T>,
+    haystack: &'a [T],
     position: usize,
     overlapping_matches: bool,
 }
 
 
-impl <'a, T, H: ?Sized> Iterator for HorspoolIter<'a, T, H>
-    where T: Copy + PartialEq + Into<usize>,
-          H: Searchable<Item = T>
+impl <'a, T> Iterator for HorspoolIter<'a, T> 
+    where T: Copy + PartialEq + Into<usize>
 {
     type Item = usize;
     fn next(&mut self) -> Option<usize> {
-        find_from_position(self.searcher, self.haystack, self.position)
+        find_from_position(&self.searcher, &self.haystack, self.position)
             .and_then(|position| {
                 if self.overlapping_matches {
                     self.position = position + 1;
                 } else {
-                    self.position = position + self.searcher.needle.num_items();
+                    self.position = position + self.searcher.needle.len();
                 }
                 Some(position)
             })
     }
-}
-
-
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use std::str;
-    use test::Bencher;
-
-    #[derive(Copy, Clone, Debug, PartialEq)]
-    enum Nucleotide {
-        A, T, C, G
-    }
-
-    impl Into<usize> for Nucleotide {
-        #[inline]
-        fn into(self) -> usize { self as usize }
-    }
-    
-    fn from_str(other: &[u8]) -> Vec<Nucleotide> {
-        other.into_iter().map( |&c| {
-            match c.into() {
-                b'A' => Nucleotide::A,
-                b'T' => Nucleotide::T,
-                b'C' => Nucleotide::C,
-                b'G' => Nucleotide::G,
-                _ => panic!("Unknown nucleotide {:?}", &c),
-            }
-        }).collect()
-    }
-
-    #[test]
-    pub fn test_rna() {
-        let haystack = from_str(b"ACCTGATCGGGTGGTACACGATAATATCGTGGCATGCACTTGCTGATCGCTTAGACTGCAAAATCGTAGCCAGTAGGT");
-        let green_eyes = from_str(b"GCA");
-        let needle = Horspool::new(green_eyes.as_slice());
-        assert_eq!(vec![31, 35, 57], needle.find_in(&haystack.as_slice()).collect::<Vec<usize>>());
-
-    }
-
-    #[bench]
-    pub fn bench_rna_enum(b: &mut Bencher) {
-        let haystack_src = from_str(b"ACCTGATCGGGTGGTACACGATAATATCGTGGCATGCACTTGCTGATCGCTTAGACTGCAAAATCGTAGCCAGTAGGT");
-        let haystack = haystack_src.as_slice();
-        let green_eyes = from_str(b"GCA");
-        let needle = Horspool::new(green_eyes.as_slice());
-        b.iter(|| {
-            assert_eq!(31, needle.find_first_in(haystack).unwrap())
-        });
-    }
-    
-    #[bench]
-    pub fn bench_rna_bytes(b: &mut Bencher) {
-        let haystack = b"ACCTGATCGGGTGGTACACGATAATATCGTGGCATGCACTTGCTGATCGCTTAGACTGCAAAATCGTAGCCAGTAGGT";
-        let green_eyes = b"GCA";
-        let needle = Horspool::new(&green_eyes[..]);
-        b.iter(|| {
-            assert_eq!(31, needle.find_first_in(haystack).unwrap())
-        });
-    }
-
 }
