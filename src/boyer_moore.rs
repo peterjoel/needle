@@ -15,7 +15,7 @@ use super::SearchIn;
 pub struct BoyerMoore <'a, T:'a> {
     needle: &'a [T],
     bad_chars: [usize; 256],
-    good_suffixes: Vec<usize>,
+    good_suffixes: Vec<usize>
 }
 
 impl <'a, T> BoyerMoore <'a, T>
@@ -23,12 +23,12 @@ impl <'a, T> BoyerMoore <'a, T>
 {
     /// Construct a new Boyer-Moore search object, and pre-compute the skip tables.
     /// If you intend to search for the same needle in multiple haystacks, it is more
-    /// efficient to create just one instance and the re-use it."]
+    /// efficient to create just one instance and then re-use it."
     pub fn new(needle: &'a [T]) -> BoyerMoore<T> {
         BoyerMoore { 
             needle: needle,
             bad_chars: build_bad_chars_table(&needle),
-            good_suffixes: build_good_suffixes_table(&needle),
+            good_suffixes: build_good_suffixes_table(&needle)
         }
     }
 }
@@ -128,7 +128,7 @@ impl <'a, T> Iterator for BoyerMooreIter<'a, T>
 #[cfg(test)]
 pub mod test {
     use super::*;
-    use super::super::SearchIn;
+    use super::super::{SearchIn, CountIn};
 
     #[test]
     pub fn test_simple() {
@@ -183,5 +183,26 @@ pub mod test {
         assert_eq!(vec![0,6,12], needle.find_in(haystack).collect::<Vec<usize>>());
     }
 
+    #[test]
+    pub fn test_occurs_in() {
+        let needle = BoyerMoore::new(b"abc");
+        let haystack = b"xxxxxxabcxxxxabc";
+        assert_eq!(true, needle.occurs_in(haystack));
+    }
 
+
+    #[test]
+    pub fn test_not_occurs_in() {
+        let needle = BoyerMoore::new(b"abc");
+        let haystack = b"xxxxxxabacxxxxabc";
+        assert_eq!(true, needle.occurs_in(haystack));
+    }
+
+
+    #[test]
+    pub fn test_count() {
+        let needle = BoyerMoore::new(b"sea");
+        let haystack = b"She sells sea shells on the sea shore.";
+        assert_eq!(2, needle.count_in(haystack));
+    }
 }

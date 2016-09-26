@@ -22,3 +22,22 @@ pub trait SearchIn<'a, H: ?Sized> {
         self.find_in(&haystack).next()
     }
 }
+
+pub trait CountIn<'a, H: ?Sized> {
+    fn count_in(&'a self, haystack: &'a H) -> usize;
+    fn occurs_in(&'a self, haystack: &'a H) -> bool {
+        self.count_in(&haystack) > 0
+    }
+}
+
+impl <'a, H: ?Sized, S> CountIn<'a, H> for S
+    where S: SearchIn<'a, H>
+{
+    fn count_in(&'a self, haystack: &'a H) -> usize {
+        self.find_in(&haystack).count()
+    }
+
+    fn occurs_in(&'a self, haystack: &'a H) -> bool {
+        self.find_first_in(&haystack).is_some()
+    }
+}
