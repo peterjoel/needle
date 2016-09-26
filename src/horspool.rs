@@ -23,58 +23,17 @@ pub struct Horspool <'a, T:'a> {
 impl <'a, T> Horspool <'a, T>
     where T: Copy + PartialEq + Into<usize>
 {
+    /// Construct a new Horspool search object, and pre-compute the skip tables.
+    /// If you intend to search for the same needle in multiple haystacks, it is more
+    /// efficient to create just one instance and then re-use it."
     pub fn new(needle: &'a [T]) -> Horspool<T> {
         Horspool { 
             needle: needle,
             bad_chars: build_bad_chars_table(&needle),
         }
     }
-
-    /// Finds the first occurence of the search term in haystack and returns the index if it is found.
-    pub fn find_first_in<'b>(&'b self, haystack: &'b [T]) -> Option<usize> {
-        self.find_in(&haystack).next()
-    }
-
-    /// Returns an iterator that will produce the indices of the needle in the haystack.
-    /// This iterator will not find overlapping matches; the first character of a match 
-    /// will start after the last character of the previous match.
-    ///
-    /// # Example
-    /// ```
-    /// use needle::{Horspool, SearchIn};
-    /// let needle = Horspool::new(b"aaba");
-    /// let haystack = b"aabaabaabaabaaba";
-    /// assert_eq!(vec![0,6,12], needle.find_in(haystack).collect::<Vec<usize>>());
-    /// ```
-    pub fn find_in<'b>(&'b self, haystack: &'b [T]) -> HorspoolIter<T> {
-        HorspoolIter {
-            searcher: &self,
-            haystack: haystack,
-            position: 0,
-            overlapping_matches: false,
-        }
-    }
-
-    /// Returns an iterator that will produce the indices of the needle in the haystack.
-    /// This iterator will find overlapping matches; the first character of a match is 
-    /// allowed to be matched from within the previous match.
-    ///
-    /// # Example
-    /// ```
-    /// use needle::{Horspool, SearchIn};
-    /// let needle = Horspool::new(b"aaba");
-    /// let haystack = b"aabaabaabaabaaba";
-    /// assert_eq!(vec![0,3,6,9,12], needle.find_overlapping_in(haystack).collect::<Vec<usize>>());
-    /// ```
-    pub fn find_overlapping_in<'b>(&'b self, haystack: &'b [T]) -> HorspoolIter<T> {
-        HorspoolIter {
-            searcher: &self,
-            haystack: &haystack,
-            position: 0,
-            overlapping_matches: true
-        }
-    }
 }
+
 
 impl <'a, T> SearchIn<'a, [T]> for Horspool<'a, T>
     where T: Copy + PartialEq + Into<usize>
