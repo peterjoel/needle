@@ -17,7 +17,6 @@ mod horspool;
 // internal for benchmarks
 mod naive_search;
 mod memchr_search;
-mod memchr_skip_back;
 
 pub use boyer_moore::BoyerMoore;
 pub use horspool::Horspool;

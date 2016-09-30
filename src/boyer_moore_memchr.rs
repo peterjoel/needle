@@ -52,7 +52,7 @@ impl <'a> SkipSearch<u8> for &'a BoyerMooreMemchr <'a> {
         } else {
             let last_char = self.needle[self.needle.len() - 1];
             let search_position = haystack_position + 2 * self.needle.len() - 1;
-            memchr(last_char, &haystack[search_position .. ]).map(|x| x + 1).unwrap_or(haystack.len() + 1)
+            memchr(last_char, &haystack[search_position .. ]).map(|x| x + 1).unwrap_or(haystack.len())
         }
     }
 

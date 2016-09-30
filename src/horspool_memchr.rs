@@ -1,5 +1,4 @@
 use memchr::memchr;
-use std::cmp::max;
 use skip_search::*;
 use super::SearchIn;
 
@@ -43,14 +42,14 @@ impl <'a> SearchIn<'a, [u8]> for HorspoolMemchr<'a> {
 
 impl <'a> SkipSearch<u8> for &'a HorspoolMemchr <'a> {
     #[inline]
-    default fn skip_offset(&self, bad_char: u8, needle_position: usize, haystack: &[u8], haystack_position: usize) -> usize {
+    default fn skip_offset(&self, bad_char: u8, _needle_position: usize, haystack: &[u8], haystack_position: usize) -> usize {
         let skip = self.bad_chars[bad_char as usize];
         if skip < self.needle.len() {
             skip
         } else {
             let last_char = self.needle[self.needle.len() - 1];
             let search_position = haystack_position + 2 * self.needle.len() - 1;
-            memchr(last_char, &haystack[search_position .. ]).map(|x| x + 1).unwrap_or(haystack.len() + 1)
+            memchr(last_char, &haystack[search_position .. ]).map(|x| x + 1).unwrap_or(haystack.len())
         }
     }
 
