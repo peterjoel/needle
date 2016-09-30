@@ -2,7 +2,7 @@
 pub trait SkipSearch<T> {
     /// Given `bad_char`, a character from haystack that didn't match with the character in the needle at 
     /// `needle_position`, calculate how many characters can be skipped 
-    fn skip_offset(&self, bad_char: T, needle_position: usize) -> usize;
+    fn skip_offset(&self, bad_char: T, needle_position: usize, haystack: &[T], haystack_position: usize) -> usize;
 
     /// The number of characters in the needle
     fn len(&self) -> usize;
@@ -27,10 +27,11 @@ pub fn find_from_position<'a, T, N>(needle: &'a N, haystack: &'a [T], mut positi
             }
         }
         let bad_char = haystack[position + needle.len() - 1];
-        position += needle.skip_offset(bad_char, needle_position);
+        position += needle.skip_offset(bad_char, needle_position, haystack, position);
     }
     None
 }
+
 
 // Bad characters table is used for when the last (rightmost) character of the needle doesn't match. The table
 // gives the number of elements to skip, to find a character that does match.

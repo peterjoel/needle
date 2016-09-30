@@ -86,7 +86,7 @@ impl <'a, T> SkipSearch<T> for &'a Horspool <'a, T>
     where T: Copy + Into<usize>
 {
     #[inline]
-    fn skip_offset(&self, bad_char: T, _: usize) -> usize {
+    fn skip_offset(&self, bad_char: T, _: usize, _haystack: &[T], _haystack_position: usize) -> usize {
         self.bad_chars[bad_char.into()]
     }
 

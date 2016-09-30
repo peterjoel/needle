@@ -9,3 +9,5 @@ license = "MIT"
 description = "Fast search functions for finding things in Strings, Arrays and iterators."
 
 [dependencies]
+memchr = "0.1.11"
+log = "0.3.6"

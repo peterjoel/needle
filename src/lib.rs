@@ -1,13 +1,23 @@
-
+#![feature(specialization)]
 #![feature(test)]
 extern crate test;
+extern crate memchr;
+
+#[macro_use]
+extern crate log;
 
 #[cfg(test)]
 mod benchmarks;
 
-pub mod boyer_moore;
+mod boyer_moore_memchr;
+mod horspool_memchr;
+mod boyer_moore;
 mod skip_search;
 mod horspool;
+// internal for benchmarks
+mod naive_search;
+mod memchr_search;
+mod memchr_skip_back;
 
 pub use boyer_moore::BoyerMoore;
 pub use horspool::Horspool;

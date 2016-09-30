@@ -85,7 +85,7 @@ impl <'a, T> SkipSearch<T> for &'a BoyerMoore <'a, T>
     where T: Copy + Into<usize>
 {
     #[inline]
-    fn skip_offset(&self, bad_char: T, needle_position: usize) -> usize {
+    default fn skip_offset(&self, bad_char: T, needle_position: usize, _haystack: &[T], _haystack_position: usize) -> usize {
         max(self.bad_chars[bad_char.into()], self.good_suffixes[needle_position])
     }
 
@@ -99,6 +99,8 @@ impl <'a, T> SkipSearch<T> for &'a BoyerMoore <'a, T>
         self.needle[index]
     }
 }
+
+
 
 pub struct BoyerMooreIter <'a, T:'a> {
     searcher: &'a BoyerMoore<'a, T>,
