@@ -16,18 +16,19 @@ pub fn find_from_position<'a, T, N>(needle: &'a N, haystack: &'a [T], mut positi
     where T: PartialEq + Into<usize> + Copy, 
           N: SkipSearch<T>
 {
-    let max_position = haystack.len() - needle.len(); 
-    while position <= max_position {
-        let mut needle_position = needle.len() - 1;
-        while haystack[position + needle_position] == needle.char_at(needle_position) {
-            if needle_position == 0 {
-                return Some(position);
-            } else {
-                needle_position -= 1;
+    if let Some(max_position) = haystack.len().checked_sub(needle.len()) {
+        while position <= max_position {
+            let mut needle_position = needle.len() - 1;
+            while haystack[position + needle_position] == needle.char_at(needle_position) {
+                if needle_position == 0 {
+                    return Some(position);
+                } else {
+                    needle_position -= 1;
+                }
             }
+            let bad_char = haystack[position + needle.len() - 1];
+            position += needle.skip_offset(bad_char, needle_position, haystack, position);
         }
-        let bad_char = haystack[position + needle.len() - 1];
-        position += needle.skip_offset(bad_char, needle_position, haystack, position);
     }
     None
 }

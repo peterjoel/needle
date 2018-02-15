@@ -11,3 +11,6 @@ description = "Fast search functions for finding things in Strings, Arrays and i
 [dependencies]
 memchr = "0.1.11"
 log = "0.3.6"
+
+[dev-dependencies]
+rand = "0.4.2"

@@ -9,6 +9,8 @@ extern crate log;
 
 #[cfg(test)]
 mod benchmarks;
+#[cfg(test)]
+mod tests;
 
 mod boyer_moore_memchr;
 mod horspool_memchr;
@@ -27,7 +29,7 @@ pub trait SearchIn<'a, H: ?Sized> {
     fn find_in(&'a self, haystack: &'a H) -> Self::Iter;
     fn find_overlapping_in(&'a self, haystack: &'a H) -> Self::Iter;
 
-    /// Finds the first occurence of the search term in haystack and returns the index if it is found.
+    /// Finds the first occurrence of the search term in haystack and returns the index if it is found.
     fn find_first_in(&'a self, haystack: &'a H) -> Option<usize> {
         self.find_in(&haystack).next()
     }

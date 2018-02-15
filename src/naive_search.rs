@@ -47,7 +47,7 @@ pub struct NaiveSearchIter <'a> {
 
 
 fn find_from_position<'a>(&NaiveSearch { needle }: &'a NaiveSearch, haystack: &'a [u8], position: usize) -> Option<usize> {
-    (position .. haystack.len() - needle.len() + 1)
+    (position .. (haystack.len() + 1).saturating_sub(needle.len()))
         .find( |needle_pos| {
             (0 .. needle.len()).all(|needle_index| {
                 needle[needle_index] == haystack[needle_index + needle_pos]
